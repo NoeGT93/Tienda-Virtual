@@ -93,6 +93,19 @@ async function body(req) {
     throw new ApiError(400, "JSON no válido");
   }
 }
+function detectedProductCategory(name, current, image) {
+  if (!image) return current;
+  const value = String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const rules = [
+    ["DRESS", /vestido|dress/],
+    ["OUTERWEAR", /blazer|chaqueta|abrigo|saco|cazadora|cardigan|sobrecamisa/],
+    ["BOTTOM", /pantalon|jean|vaquero|falda|short|bermuda|jogger|legging/],
+    ["TOP", /camisa|camiseta|blusa|top|sueter|sweater|jersey|polo/],
+    ["BAG", /bolso|cartera|mochila|bag/],
+    ["SHOES", /zapato|tenis|bota|sandalia|calzado|shoe/],
+  ];
+  return rules.find(([, pattern]) => pattern.test(value))?.[0] || current;
+}
 async function catalog(admin = false) {
   return await Promise.all(
     (
@@ -101,6 +114,7 @@ async function catalog(admin = false) {
       )
     ).map(async (p) => ({
       ...p,
+      category: detectedProductCategory(p.name, p.category, p.image),
       price: p.price / 100,
       oldPrice: p.old_price ? p.old_price / 100 : null,
       variants: await all("SELECT * FROM variants WHERE product_id=?", p.id),
@@ -807,7 +821,8 @@ export async function handler(req, res) {
           description = str(b.description, 3000),
           color = str(b.color, 80),
           price = integer(b.price),
-          image = b.image ? assetUrl(b.image) : null;
+          image = b.image ? assetUrl(b.image) : null,
+          category = detectedProductCategory(name, b.category, image);
         await transaction(async () => {
           if (id) {
             check(
@@ -819,7 +834,7 @@ export async function handler(req, res) {
               "UPDATE products SET name=?,description=?,category=?,gender=?,color=?,price=?,image=?,active=? WHERE id=?",
               name,
               description,
-              b.category,
+              category,
               b.gender,
               color,
               price,
@@ -833,7 +848,7 @@ export async function handler(req, res) {
               pid,
               name,
               description,
-              b.category,
+              category,
               b.gender,
               color,
               price,
