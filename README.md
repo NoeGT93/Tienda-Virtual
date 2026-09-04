@@ -1,87 +1,34 @@
-# Lulos Fashion Xela — interfaz HTML y servidor local
+# Lulos Fashion Xela
 
-Esta versión conserva HTML, CSS y JavaScript en el navegador y añade un servidor Node.js con SQLite. No está publicada. No debe abrirse `public/index.html` con doble clic: autenticación, catálogo, inventario y pedidos necesitan el servidor.
+Tienda con interfaz HTML, CSS y JavaScript, API Node.js y administración autenticada. Mantiene la portada y las vistas de estudio del probador.
 
-## Arranque
+## Administración
 
-Requiere Node.js 24 o posterior. No necesita instalar paquetes externos.
+Abre `/#admin`. Tras activar al propietario, inicia sesión con su correo y contraseña. No hay credenciales predeterminadas.
 
-```powershell
-cd ruta/a/lulos-production
-node server/server.mjs
-```
+Módulos: productos y fotografías, existencias por talla, pedidos, pagos registrados manualmente, envíos, clientes, promociones, maniquíes, configuración del probador, actividad y usuarios/accesos.
 
-Abre `http://127.0.0.1:8787`. También puedes usar `INICIAR.ps1` desde esta carpeta. La base de datos se crea en `data/lulos.sqlite` y las imágenes cargadas quedan en `data/uploads/`.
+En **Usuarios y accesos** puedes invitar administradores o clientes, cambiar permisos, suspender cuentas, revocar enlaces y generar enlaces de recuperación. Las invitaciones no envían correos: copia el enlace y compártelo directamente con su destinatario. Caduca en 24 horas y solo admite un uso. Los cambios de acceso quedan registrados. En **Mi cuenta** puedes cambiar tu contraseña; se cierran las demás sesiones.
 
-## Administrador
+## Vercel
 
-En el primer arranque local, abre **Administración** y crea tu administrador con el formulario de configuración inicial. Esta opción desaparece cuando ya existe un administrador y está desactivada en modo público de producción. También puedes usar el comando en otra terminal, desde la misma carpeta:
+- Framework: Other. Directorio raíz: `./`. `vercel.json` configura `public` y las funciones API.
+- Node.js 24 o posterior. Instalación: `npm ci`.
+- PostgreSQL mediante `DATABASE_URL`, `STORAGE_DATABASE_URL`, `POSTGRES_URL` o `STORAGE_POSTGRES_URL`, en ese orden. La integración Neon existente usa `STORAGE_DATABASE_URL`.
+- Origen público: `PUBLIC_ORIGIN=https://tu-dominio`. Si se omite, se usa `VERCEL_PROJECT_PRODUCTION_URL` cuando están habilitadas las variables de sistema de Vercel.
+- Activa el primer administrador añadiendo **ADMIN_SETUP_TOKEN** como secreto de Production: utiliza un valor aleatorio de al menos 32 caracteres, vuelve a desplegar y abre `/#admin`. Introduce ese código y elige tu nombre, correo y contraseña personal de 12 a 128 caracteres. Después de crear la cuenta puedes eliminar la variable y volver a desplegar. La activación inicial queda cerrada en la base de datos.
+- No subas archivos `.env`, bases de datos locales, contraseñas ni enlaces de activación a GitHub.
 
-```powershell
-node server/admin.mjs tu-correo@ejemplo.com
-```
+La API crea las tablas de forma idempotente sin borrar registros existentes. Los productos ilustrativos nuevos comienzan sin existencias y los pedidos desactivados. Registra el inventario real y completa **Tienda y envíos** antes de activar ventas. Las fotografías PNG/JPG/WebP, de hasta 2 MB cada una, se guardan en PostgreSQL y se sirven mediante `/uploads/`; no requieren otro almacenamiento. Para un catálogo de gran volumen conviene migrar estas imágenes a almacenamiento de objetos y mantener los identificadores de producto.
 
-Introduce una contraseña de al menos 12 caracteres. La entrada se oculta. Este comando crea un administrador o restablece explícitamente la contraseña del administrador indicado. Después inicia sesión desde **Mi cuenta** y abre **Administración**. No se incluyen usuarios ni contraseñas predeterminadas.
+## Desarrollo local
 
-## Antes de aceptar pedidos
+Instala Node.js 24+, ejecuta `npm ci` y `npm start`; abre `http://127.0.0.1:8787`. También puedes usar `INICIAR.ps1`. Sin conexión PostgreSQL se utiliza SQLite en `data/lulos.sqlite`. Copia `.env.example` a `.env` si necesitas otra configuración. En localhost, el primer administrador se puede crear directamente en `/#admin`.
 
-1. Reemplaza los productos e imágenes ilustrativos por el catálogo real.
-2. Crea las tallas y registra existencias desde Inventario. El catálogo semilla comienza con stock cero.
-3. Ajusta prendas por producto y maniquí desde Probador. Puedes subir PNG/WebP transparentes y modificar posición, dimensiones, rotación y capa.
-4. Configura banco/titular/cuenta en las instrucciones de transferencia, dirección, teléfono y tarifa de envío en Tienda y envíos.
-5. Habilita contra entrega únicamente si tu negocio lo ofrece.
-6. Activa **Aceptar pedidos** cuando toda la información sea correcta. Se entrega desactivado.
+Recuperación del propietario desde un entorno de confianza con conexión a la base de datos: `npm run admin -- correo@ejemplo.com`. La herramienta pide una nueva contraseña con entrada oculta y revoca las sesiones anteriores. No cambia las contraseñas de Vercel, GitHub ni Neon.
 
-La interfaz administrativa permite registrar pagos recibidos y números de guía. Estos registros no efectúan transferencias bancarias ni compran etiquetas de transporte.
+## Verificación
 
-## Implementado
+`npm test` prueba activación protegida, roles, invitaciones, recuperación, suspensión, revocación de sesiones, persistencia de imágenes, stock, integridad del total y cancelación de pedidos. Para ejecutar las mismas pruebas con PostgreSQL local, define `DB_DRIVER=pglite` antes de `npm test`.
 
-- Catálogo respaldado por base de datos, altas y edición de productos, desactivación, tallas, SKU y carga de imágenes.
-- Maniquí femenino y masculino independientes, sin estiramiento de la misma imagen. El masculino lleva camiseta y shorts base.
-- Probador por capas, exclusión vestido/top/pantalón, compatibilidad por colección y ajustes guardados por producto/maniquí, historial local de deshacer/rehacer.
-- Registro e inicio de sesión, contraseñas scrypt, cookies HttpOnly, sesiones persistentes, CSRF y protección de API administrativa por rol.
-- Perfil y direcciones en servidor, favoritos y looks asociados al usuario, enlaces compartibles.
-- Bolsa local con variantes; cotización y pedido calculados en servidor, stock transaccional, idempotencia y códigos de descuento.
-- Compra como invitado o con cuenta. Pedidos de invitado visibles para la sesión que los creó.
-- Historial de estados, registro manual de pagos, transportista y número de guía; cancelación con devolución de stock.
-- Promociones con porcentaje, compra mínima, vencimiento y límite de usos.
-- Reseñas restringidas a productos de pedidos entregados; eventos del probador almacenados en servidor.
-
-## Límites pendientes antes de una tienda pública
-
-Esto es una implementación local funcional, no una certificación de que todos los requisitos del documento original estén listos para producción pública.
-
-- El catálogo, fotografías, prendas y posiciones iniciales siguen siendo ilustrativos. Los assets de ropa heredados usan una hoja sobre fondo blanco y un filtro de eliminación de blanco al renderizar; para un ajuste comercial limpio se necesitan imágenes transparentes calibradas. El editor permite cargarlas. La IA no logró producir una hoja de prendas con transparencia real en esta sesión.
-- No se integra cobro con tarjeta, webhooks de una pasarela, logística externa, correo transaccional, verificación de email ni recuperación de contraseña por correo.
-- Inventario de un solo almacén; entrega con tarifa general y umbral de gratuidad. No hay tarifas por municipio, impuestos/facturación, devoluciones completas, reembolsos bancarios automatizados (sí se puede registrar una devolución ya realizada) ni programa de fidelización.
-- Las tallas existentes se conservan por trazabilidad. Para dejar una talla sin venta, ajusta su stock a cero; no hay editor de cambio de nombre de SKU vendido.
-- Se incluyen dos maniquíes; el administrador puede añadir más. Los ajustes son por producto/maniquí, todavía no por variante individual ni vista posterior.
-- Los datos personales requieren tu aviso de privacidad, política de retención, procesos de atención y configuración comercial antes de operar públicamente.
-- El historial de comparación y la bolsa permanecen en el dispositivo. No hay sincronización de bolsa ni vista A/B completa de dos maniquíes.
-
-## Despliegue posterior
-
-Repositorio: https://github.com/NoeGT93/Tienda-Virtual. No se ha desplegado en Vercel.
-
-Este servidor necesita un proceso Node y almacenamiento persistente para SQLite y las imágenes. **No debe subirse a Vercel suponiendo que `data/` persistirá en funciones efímeras.** Para Vercel se requiere adaptar la persistencia a una base de datos y almacenamiento externos; otra opción es alojar este servidor en un servicio con volumen persistente y HTTPS. La interfaz sigue siendo HTML en cualquiera de los casos.
-
-En un servidor público configura `NODE_ENV=production` y `PUBLIC_ORIGIN=https://tu-dominio`, termina TLS en un proxy, conserva copias de seguridad y aplica las actualizaciones de Node. `.env.example` documenta las variables; el comando básico no carga `.env` automáticamente. Usa `node --env-file=.env server/server.mjs` si configuras ese archivo.
-
-## Pruebas
-
-```powershell
-node --test tests/api.test.mjs
-```
-
-Las pruebas crean una base temporal independiente: acceso por roles, CSRF, validación de stock, precio autoritativo, pedido idempotente, aislamiento entre sesiones, cancelación sin duplicar stock, configuración de assets y descuentos. No modifican la base de uso local.
-
-## Archivos
-
-- `public/`: interfaz HTML, estilos, scripts e imágenes.
-- `server/`: servidor HTTP, autenticación, esquema SQLite, semilla y comando de administrador.
-- `tests/`: pruebas de integración.
-- `data/`: datos privados generados al iniciar; excluidos del ZIP y de Git.
-
-La carpeta `public/` conserva componentes de la demo anterior y añade `live.js` para conectar las pantallas al servidor. Los datos comerciales no dependen de los precios ni del estado administrativo de localStorage. La API vuelve a validar cada operación.
-
-
+El probador utiliza composiciones de estudio preparadas para el catálogo compatible; no calcula el ajuste físico de tallas ni genera automáticamente imágenes de prendas nuevas. Los pagos por transferencia o contra entrega se registran en administración; no existe cobro automático con tarjeta ni envío automático de mensajes.
