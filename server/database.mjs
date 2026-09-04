@@ -3,7 +3,17 @@ import { readFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 
 const context = new AsyncLocalStorage();
-const connectionString = process.env.DATABASE_URL || process.env.STORAGE_DATABASE_URL || process.env.POSTGRES_URL || process.env.STORAGE_POSTGRES_URL;
+let connectionString = process.env.DATABASE_URL || process.env.STORAGE_DATABASE_URL || process.env.POSTGRES_URL || process.env.STORAGE_POSTGRES_URL;
+if (connectionString) {
+  const url = new URL(connectionString);
+  // Preserve pg 8's certificate verification explicitly for Neon connections.
+  if (url.hostname.endsWith('.neon.tech') &&
+      ['prefer', 'require', 'verify-ca'].includes(url.searchParams.get('sslmode')) &&
+      url.searchParams.get('uselibpqcompat') !== 'true') {
+    url.searchParams.set('sslmode', 'verify-full');
+    connectionString = url.toString();
+  }
+}
 const embeddedPostgres =
   process.env.DB_DRIVER === "pglite" && !process.env.VERCEL;
 const postgres = Boolean(connectionString) || embeddedPostgres;
