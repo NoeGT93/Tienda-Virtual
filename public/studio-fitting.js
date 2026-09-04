@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const sheetCache = new Map(), sceneCache = new Map(), started = new WeakSet();
+  const automaticRealBody = realBody;
   const approved = {
     'top-marfil': ['TOP', 1, '#e6ddc7'], 'top-oliva': ['TOP', 1, '#81846a'],
     'blazer-arena': ['OUTERWEAR', 2, '#b7936a'], 'blazer-pizarra': ['OUTERWEAR', 2, '#696966'],
@@ -118,6 +119,7 @@
   }
   realBody = (items = state.equipped, interactive = false) => {
     const s = selection(items, liveMannequin), label = `${s.sex === 'male' ? 'Caballero' : 'Dama'} · ${s.list.map(p => p.name).join(', ') || 'Silueta de estudio'}`;
+    if (!s.supported) return automaticRealBody(items, interactive);
     return `<div class="real-body studio-body" data-studio-sex="${esc(s.sex)}" data-studio-items="${esc(JSON.stringify(items))}" data-studio-supported="${s.supported}" aria-busy="true"><canvas class="studio-photograph" role="img" aria-label="${esc(label)}"></canvas><span class="studio-loading">Preparando tu look…</span>${interactive && s.supported ? '<button class="studio-zoom" type="button" data-studio-zoom aria-label="Ampliar vista del look">⤢</button>' : ''}${s.bag && s.supported ? `<div class="studio-accessory"><span>COMPLETA EL LOOK</span>${imageMarkup(s.bag)}<small>${esc(s.bag.name)}</small></div>` : ''}</div>`;
   };
   async function paint(node) {
@@ -147,11 +149,12 @@
   const previousRender = renderLook;
   renderLook = () => {
     previousRender();
+    const automatic = !!document.querySelector('.precision-body[data-fit-engine="automatic"]');
     const caption = document.querySelector('#stage-caption');
-    if (caption) caption.textContent = lookProducts().length ? 'Tu combinación · vista de estudio' : 'Elige una prenda para ver cómo se lleva';
-    const status = document.querySelector('.live-dot'); if (status) status.textContent = 'Vista de estudio';
+    if (caption) caption.textContent = lookProducts().length ? (automatic ? 'Motor automático · ajuste frontal' : 'Tu combinación · vista de estudio') : 'Elige una prenda para ver cómo se lleva';
+    const status = document.querySelector('.live-dot'); if (status) status.textContent = automatic ? 'Autoajuste activo' : 'Vista de estudio';
     const note = document.querySelector('.fitting-room > .disclaimer');
-    if (note) note.textContent = 'Imagen ilustrativa de la combinación. Consulta las medidas para elegir tu talla.';
+    if (note) note.textContent = automatic ? 'La imagen se escala y adapta automáticamente. Consulta las medidas para elegir tu talla.' : 'Imagen ilustrativa de la combinación. Consulta las medidas para elegir tu talla.';
     schedule();
   };
   document.addEventListener('click', event => {
