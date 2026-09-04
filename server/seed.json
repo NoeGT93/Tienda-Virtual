@@ -1,0 +1,164 @@
+[
+  {
+    "id": "top-marfil",
+    "name": "Top de punto Esencia",
+    "category": "TOP",
+    "price": 189,
+    "color": "Marfil",
+    "swatch": "#e6ddc7",
+    "cell": 1,
+    "filter": "none",
+    "gender": "Damas",
+    "badge": "NUEVO",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "description": "Tejido suave, cuello redondo y una silueta sencilla para combinar todos los días."
+  },
+  {
+    "id": "blazer-arena",
+    "name": "Blazer Arena",
+    "category": "OUTERWEAR",
+    "price": 429,
+    "color": "Camel",
+    "swatch": "#b7936a",
+    "cell": 2,
+    "filter": "none",
+    "gender": "Unisex",
+    "badge": "ESENCIAL",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "description": "Una tercera pieza de corte relajado, con solapas clásicas y acabado de sastrería."
+  },
+  {
+    "id": "pantalon-grafito",
+    "name": "Pantalón de sastre Alba",
+    "category": "BOTTOM",
+    "price": 299,
+    "color": "Grafito",
+    "swatch": "#454645",
+    "cell": 3,
+    "filter": "none",
+    "gender": "Unisex",
+    "badge": "",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "description": "Tiro alto y pierna amplia. Una base versátil para tus looks de oficina o fin de semana."
+  },
+  {
+    "id": "falda-cacao",
+    "name": "Falda midi Cacao",
+    "category": "BOTTOM",
+    "price": 249,
+    "oldPrice": 319,
+    "color": "Cacao",
+    "swatch": "#574338",
+    "cell": 4,
+    "filter": "none",
+    "gender": "Damas",
+    "badge": "−22%",
+    "sizes": [
+      "S",
+      "M",
+      "L"
+    ],
+    "description": "Línea fluida y largo midi. Su caída ligera aporta movimiento a tu combinación."
+  },
+  {
+    "id": "bolso-noche",
+    "name": "Bolso de mano Noche",
+    "category": "BAG",
+    "price": 349,
+    "color": "Negro",
+    "swatch": "#242323",
+    "cell": 5,
+    "filter": "none",
+    "gender": "Unisex",
+    "badge": "",
+    "sizes": [
+      "Única"
+    ],
+    "description": "Formato compacto, asa superior y cierre metálico. Un detalle que completa el look."
+  },
+  {
+    "id": "top-oliva",
+    "name": "Top de punto Oliva",
+    "category": "TOP",
+    "price": 189,
+    "color": "Oliva",
+    "swatch": "#81846a",
+    "cell": 1,
+    "filter": "sepia(.45) saturate(.65) brightness(.7) contrast(3)",
+    "gender": "Damas",
+    "badge": "NUEVO",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "description": "El básico de punto en un tono oliva sereno. Fácil de llevar con sastrería y faldas."
+  },
+  {
+    "id": "blazer-pizarra",
+    "name": "Blazer Pizarra",
+    "category": "OUTERWEAR",
+    "price": 449,
+    "color": "Pizarra",
+    "swatch": "#696966",
+    "cell": 2,
+    "filter": "grayscale(1) brightness(.72) contrast(2.5)",
+    "gender": "Unisex",
+    "badge": "",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "description": "Sastrería relajada en gris profundo. Combínalo con tonos claros para un contraste sutil."
+  },
+  {
+    "id": "falda-perla",
+    "name": "Falda midi Perla",
+    "category": "BOTTOM",
+    "price": 279,
+    "color": "Perla",
+    "swatch": "#b8b0a2",
+    "cell": 4,
+    "filter": "grayscale(.8) brightness(2.25)",
+    "gender": "Damas",
+    "badge": "ÚLTIMAS PIEZAS",
+    "sizes": [
+      "S",
+      "M"
+    ],
+    "description": "Nuestra falda fluida en un acabado claro para combinaciones suaves y naturales."
+  },
+  {
+    "id": "pantalon-humo",
+    "name": "Pantalón Humo",
+    "category": "BOTTOM",
+    "price": 299,
+    "color": "Gris",
+    "swatch": "#93938e",
+    "cell": 3,
+    "filter": "brightness(1.7)",
+    "gender": "Unisex",
+    "badge": "AGOTADO",
+    "sizes": [],
+    "description": "Silueta amplia y cómoda en gris suave. Puedes probarlo, aunque aún no está disponible para comprar."
+  }
+]
