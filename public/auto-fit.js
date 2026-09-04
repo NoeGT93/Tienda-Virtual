@@ -31,8 +31,8 @@
     });
   }
   function hex(rgb) { return '#' + rgb.map(value => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')).join(''); }
-  async function analyzeGarment(file) {
-    const named = classifyName(file.name), bitmap = await loadBitmap(file);
+  async function analyzeGarment(file, productName = '') {
+    const named = classifyName(`${productName} ${file.name}`), bitmap = await loadBitmap(file);
     const scale = Math.min(1, 640 / Math.max(bitmap.width, bitmap.height));
     const canvas = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(bitmap.width * scale)), height: Math.max(1, Math.round(bitmap.height * scale)) });
     const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -94,7 +94,7 @@
     const file = input.files[0], status = form.querySelector('.auto-fit-status');
     if (status) status.textContent = 'Analizando fondo, forma y proporciones…';
     try {
-      const result = await analyzeGarment(file);
+      const result = await analyzeGarment(file, form.elements.name?.value);
       if (result.category) form.elements.category.value = result.category;
       if (result.gender) form.elements.gender.value = result.gender;
       if (result.swatch) form.elements.swatch.value = result.swatch;
