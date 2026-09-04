@@ -1,83 +1,119 @@
-(()=>{
+/* Shared 2D fitting renderer: one coordinate system for studio and saved looks. */
+(() => {
   'use strict';
-
-  /*
-   * Ajuste fino SOLO para el probador interactivo.
-   * La portada, looks guardados y demás composiciones mantienen las
-   * proporciones editoriales originales para no deformar el diseño.
-   */
-  const precise={
-    female:{
-      'top-marfil':      {x:31,y:21,width:38,height:27,z:20},
-      'top-oliva':       {x:31,y:21,width:38,height:27,z:20},
-      'blazer-arena':    {x:22,y:17,width:56,height:39,z:30},
-      'blazer-pizarra':  {x:22,y:17,width:56,height:39,z:30},
-      'pantalon-grafito':{x:28,y:40,width:44,height:55,z:10},
-      'pantalon-humo':   {x:28,y:40,width:44,height:55,z:10},
-      'falda-cacao':     {x:29,y:41,width:42,height:41,z:10},
-      'falda-perla':     {x:29,y:41,width:42,height:41,z:10},
-      'bolso-noche':     {x:62,y:45,width:24,height:22,z:50,rotation:-2}
-    },
-    male:{
-      'blazer-arena':    {x:20,y:17,width:60,height:40,z:30},
-      'blazer-pizarra':  {x:20,y:17,width:60,height:40,z:30},
-      'pantalon-grafito':{x:27,y:40,width:46,height:55,z:10},
-      'pantalon-humo':   {x:27,y:40,width:46,height:55,z:10},
-      'bolso-noche':     {x:63,y:45,width:24,height:22,z:50,rotation:-2}
-    }
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet'; stylesheet.href = 'visual-refresh.css?v=3';
+  document.head.append(stylesheet);
+  const images = new Map(), garments = new Map();
+  const profiles = {
+    female: { shoulders: .295, waist: .235, shoulderY: .187, waistY: .407, ankleY: .936, jacketY: .158, jacketHem: .534 },
+    male: { shoulders: .365, waist: .293, shoulderY: .171, waistY: .427, ankleY: .936, jacketY: .145, jacketHem: .535 }
   };
-
-  /* Posiciones editoriales originales del proyecto. */
-  const editorial={
-    TOP:{x:18,y:20,width:64,height:28,z:20},
-    BOTTOM:{x:10,y:43,width:80,height:53,z:10},
-    OUTERWEAR:{x:4,y:17,width:92,height:39,z:30},
-    BAG:{x:61,y:44,width:36,height:24,z:50},
-    DRESS:{x:8,y:20,width:84,height:67,z:20},
-    SHOES:{x:17,y:88,width:66,height:12,z:20},
-    ACCESSORY_HEAD:{x:26,y:0,width:48,height:15,z:50},
-    ACCESSORY:{x:28,y:22,width:44,height:17,z:50}
-  };
-
-  const fittingFallback={
-    TOP:{x:31,y:21,width:38,height:27,z:20},
-    OUTERWEAR:{x:22,y:17,width:56,height:39,z:30},
-    BOTTOM:{x:28,y:40,width:44,height:55,z:10},
-    BAG:{x:62,y:45,width:24,height:22,z:50},
-    DRESS:{x:25,y:20,width:50,height:67,z:20},
-    SHOES:{x:31,y:89,width:38,height:10,z:20},
-    ACCESSORY_HEAD:{x:34,y:2,width:32,height:13,z:50},
-    ACCESSORY:{x:35,y:24,width:30,height:15,z:50}
-  };
-
-  const css=document.createElement('style');
-  css.textContent=`
-    .stage .real-body{overflow:hidden}
-    .stage .fitted-layer{background-repeat:no-repeat;transform-origin:center center;transition:opacity .18s ease,filter .18s ease}
-    .stage .fitted-layer:hover,.stage .fitted-layer:focus-visible{filter:drop-shadow(0 2px 2px rgba(35,37,32,.16))!important;outline:1px dashed rgba(72,78,64,.55);outline-offset:2px}
-    .stage-caption{pointer-events:none}
-    .home-visual .real-body{overflow:hidden}
-    @media (max-width:720px){
-      .stage{height:205px!important}
-      .stage .real-body{height:205px!important;width:136.66px!important}
-    }
-    @media (max-width:390px){
-      .stage{height:185px!important}
-      .stage .real-body{height:185px!important;width:123.33px!important}
-    }
-  `;
-  document.head.append(css);
-
+  function loadImage(url) {
+    if (!images.has(url)) images.set(url,new Promise((resolve,reject) => {
+      const image = new Image(); image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Imagen no disponible'));image.src=url;
+    }));
+    return images.get(url);
+  }
+  const canvas=(width,height)=>Object.assign(document.createElement('canvas'),{width:Math.round(width),height:Math.round(height)});
+  // Remove only the light background connected to the edge. Light fabric inside a garment stays opaque.
+  function trimBackground(source,removeHoles=false) {
+    const ctx=source.getContext('2d',{willReadFrequently:true}), image=ctx.getImageData(0,0,source.width,source.height);
+    const {data}=image,w=source.width,h=source.height,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);
+    let head=0,tail=0;
+    const background=i=>data[i*4+3]<12 || (Math.min(data[i*4],data[i*4+1],data[i*4+2])>238 && Math.max(data[i*4],data[i*4+1],data[i*4+2])-Math.min(data[i*4],data[i*4+1],data[i*4+2])<12);
+    const visit=i=>{if(i>=0&&i<w*h&&!seen[i]&&background(i)){seen[i]=1;queue[tail++]=i;}};
+    for(let x=0;x<w;x++){visit(x);visit((h-1)*w+x)}
+    for(let y=0;y<h;y++){visit(y*w);visit(y*w+w-1)}
+    while(head<tail){const i=queue[head++];data[i*4+3]=0;if(i%w)visit(i-1);if(i%w<w-1)visit(i+1);visit(i-w);visit(i+w)}
+    if(removeHoles)for(let i=0;i<w*h;i++)if(background(i))data[i*4+3]=0;
+    let left=w,top=h,right=0,bottom=0;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>30){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
+    if(right<=left||bottom<=top)throw Error('No se pudo identificar la prenda');
+    ctx.putImageData(image,0,0);
+    const result=canvas(right-left+1,bottom-top+1);result.getContext('2d').drawImage(source,left,top,result.width,result.height,0,0,result.width,result.height);
+    return result;
+  }
+  function spanAt(source,position) {
+    const ctx=source.getContext('2d',{willReadFrequently:true}),y=Math.min(source.height-1,Math.max(0,Math.round(position*source.height)));
+    const data=ctx.getImageData(0,y,source.width,1).data;
+    let left=source.width,right=0;for(let x=0;x<source.width;x++)if(data[x*4+3]>100){left=Math.min(left,x);right=Math.max(right,x)}
+    return Math.max(.25,(right-left+1)/source.width);
+  }
+  function assetFor(p,mannequin) {return boot?.assets?.find(a=>a.product_id===p.id&&a.mannequin_id===mannequin);}
+  function garmentKey(p,mannequin) {const a=assetFor(p,mannequin);return [p.id,a?.image||p.image||p.cell,p.filter||'none'].join('|');}
+  async function prepare(p,mannequin) {
+    const key=garmentKey(p,mannequin);if(garments.has(key))return garments.get(key);
+    const promise=(async()=>{
+      const a=assetFor(p,mannequin),url=a?.image||p.image,im=await loadImage(url?cleanPath(url):'/assets/fashion-sheet.png');
+      const cw=url?im.naturalWidth:im.naturalWidth/3,ch=url?im.naturalHeight:im.naturalHeight/2;
+      const scale=Math.min(1,900/Math.max(cw,ch)),source=canvas(cw*scale,ch*scale);
+      source.getContext('2d').drawImage(im,url?0:(p.cell%3)*cw,url?0:Math.floor(p.cell/3)*ch,cw,ch,0,0,source.width,source.height);
+      const cut=trimBackground(source,!url&&p.category==='BAG');
+      if(!url&&p.filter&&p.filter!=='none'){
+        const recolored=canvas(cut.width,cut.height),ctx=recolored.getContext('2d');ctx.drawImage(cut,0,0);
+        const pixels=ctx.getImageData(0,0,cut.width,cut.height),d=pixels.data;
+        const color=/^#[0-9a-f]{6}$/i.test(p.swatch||'')?p.swatch:'#88887c';
+        const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));let sum=0,count=0;
+        for(let i=0;i<d.length;i+=4)if(d[i+3]>128){sum+=(d[i]+d[i+1]+d[i+2])/3;count++}
+        const mean=sum/Math.max(count,1);
+        for(let i=0;i<d.length;i+=4)if(d[i+3]){const shade=((d[i]+d[i+1]+d[i+2])/3)/Math.max(mean,1);for(let c=0;c<3;c++)d[i+c]=Math.min(255,rgb[c]*shade)}
+        ctx.putImageData(pixels,0,0);return recolored;
+      }
+      return cut;
+    })();garments.set(key,promise);return promise;
+  }
+  function fit(p,source,mannequin) {
+    const body=profiles[mannequin]||profiles.female,skirt=p.category==='BOTTOM'&&(/falda|skirt/i.test(p.name)||p.cell===4);
+    let width,height,y,z=20,x;
+    if(p.category==='TOP'){width=body.shoulders/spanAt(source,.12);y=body.shoulderY-.009;height=body.waistY+.065-y;}
+    else if(p.category==='OUTERWEAR'){width=body.shoulders/spanAt(source,.115);y=body.jacketY;height=body.jacketHem-y;z=30;}
+    else if(p.category==='BOTTOM'){width=body.waist/spanAt(source,.045);y=body.waistY;height=(skirt?.80:body.ankleY)-y;z=10;}
+    else if(p.category==='DRESS'){width=body.shoulders/spanAt(source,.12);y=body.shoulderY-.01;height=.83-y;}
+    else if(p.category==='BAG'){width=.21;y=.49;height=width*2/3/(source.width/source.height);x=.64;z=40;}
+    else if(p.category==='SHOES'){width=.29;y=.925;height=.065;}
+    else if(p.category==='ACCESSORY_HEAD'){width=.18;y=.025;height=.11;z=40;}
+    else {width=.18;y=.215;height=.12;z=40;}
+    width=Math.min(.66,Math.max(.12,width));
+    return {x:x??(.5-width/2),y,width,height,z};
+  }
   fittedLayer=(p,interactive=false)=>{
-    const pos=interactive
-      ? (precise[liveMannequin]?.[p.id]||fittingFallback[p.category]||fittingFallback.ACCESSORY)
-      : (editorial[p.category]||editorial.ACCESSORY);
-    const rotation=Number(pos.rotation||0);
-    const image=p.image;
-    const visual=image
-      ? `background-image:url('${cleanPath(image)}');background-size:contain;background-position:center;`
-      : `${spriteStyle(p)};`;
-    const style=`${visual}left:${pos.x}%;top:${pos.y}%;width:${pos.width}%;height:${pos.height}%;transform:rotate(${rotation}deg);z-index:${pos.z}`;
-    return `<${interactive?'button':'div'} class="sprite fitted-layer ${image?'':'legacy-cutout'}" style="${style}" ${interactive?`data-remove="${p.category}" aria-label="Retirar ${esc(p.name)}" title="Retirar ${esc(p.name)}"`:''}></${interactive?'button':'div'}>`;
+    const tag=interactive?'button':'div';
+    return `<${tag} class="fit-layer" data-fit-product="${esc(p.id)}" data-fit-mannequin="${esc(liveMannequin)}" ${interactive?`type="button" data-remove="${p.category}" aria-label="Retirar ${esc(p.name)}"`:''}><canvas aria-hidden="true"></canvas></${tag}>`;
   };
+  realBody=(items=state.equipped,interactive=false)=>{
+    const m=boot.mannequins.find(m=>m.id===liveMannequin);
+    return `<div class="real-body precision-body" data-silhouette="${esc(liveMannequin)}"><img class="silhouette-image" src="${cleanPath(m?.image)}" alt="${esc(m?.name||'Maniquí')}" width="1024" height="1536">${lookProducts(items).map(p=>fittedLayer(p,interactive)).join('')}</div>`;
+  };
+  const pending=new WeakSet();
+  async function paint(node) {
+    if(pending.has(node))return;pending.add(node);
+    const p=productById(node.dataset.fitProduct),mannequin=node.dataset.fitMannequin;if(!p)return;
+    try {
+      const source=await prepare(p,mannequin);if(!node.isConnected)return;
+      const saved=assetFor(p,mannequin),pos=saved?{x:saved.x/100,y:saved.y/100,width:saved.width/100,height:saved.height/100,z:saved.z}:fit(p,source,mannequin);
+      Object.assign(node.style,{left:`${pos.x*100}%`,top:`${pos.y*100}%`,width:`${pos.width*100}%`,height:`${pos.height*100}%`,zIndex:pos.z,transform:`rotate(${Number(saved?.rotation)||0}deg)`});
+      const c=node.querySelector('canvas');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);node.classList.add('fit-ready');
+    }catch{node.remove();toast('No se pudo cargar una imagen de la prenda. Intenta de nuevo.');}
+  }
+  let scheduled=false;
+  async function paintThumbnail(node){
+    if(pending.has(node))return;pending.add(node);const p=productById(node.dataset.fitThumb);if(!p)return;
+    try{const source=await prepare(p,'thumbnail');if(!node.isConnected)return;const c=canvas(source.width,source.height);c.getContext('2d').drawImage(source,0,0);c.setAttribute('aria-hidden','true');node.replaceChildren(c);node.classList.add('clean-thumbnail');}catch{/* Keep the original product photograph if processing fails. */}
+  }
+  function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;document.querySelectorAll('[data-fit-product]').forEach(paint);document.querySelectorAll('[data-fit-thumb]').forEach(paintThumbnail)})}
+  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+
+  home=()=>`<section class="campaign-hero"><div class="campaign-copy"><span class="eyebrow">LULOS · FASHION XELA</span><h1>Tu estilo.<br><em>Sin esfuerzo.</em></h1><p>Esenciales que combinan contigo.<br>Explora, prueba y encuentra tu propia forma de llevarlos.</p><div class="campaign-actions"><a class="button-link" href="#tienda">Descubrir la colección <span>↗</span></a><a class="campaign-text-link" href="#tienda">Crear mi look</a></div><div class="campaign-note"><span>01 — ESENCIALES</span><span>Damas & caballeros</span></div></div><figure class="campaign-image"><img src="assets/campaign-editorial.png" alt="Colección de sastrería en tonos camel, marfil y grafito para dama y caballero" width="1024" height="1280" fetchpriority="high"><figcaption><span>Menos piezas.<br>Más posibilidades.</span><span>LULOS / 01</span></figcaption></figure></section><section class="collection-strip" aria-label="Colecciones"><a href="#tienda" data-collection="Damas">01 <strong>Para ella</strong><span>↗</span></a><a href="#tienda" data-collection="Caballeros">02 <strong>Para él</strong><span>↗</span></a><a href="#tienda" data-collection="Todo">03 <strong>Tu próxima combinación</strong><span>↗</span></a></section><section class="home-section curated-section"><div class="section-title"><div><span class="eyebrow">LA SELECCIÓN LULOS</span><h2>Bien elegidos.<br><em>Mejor combinados.</em></h2></div><a href="#tienda">Ver todas las prendas ↗</a></div>${cards(products.slice(0,4))}</section><section class="studio-invite"><div><span class="eyebrow">TU PROBADOR PERSONAL</span><h2>Haz espacio<br>para <em>tu estilo.</em></h2></div><div><p>Elige una silueta y combina tus favoritos. Las prendas se colocan automáticamente para que puedas explorar el look completo.</p><a class="button-link" href="#tienda">Entrar al probador ↗</a><small>Vista orientativa en 2D. Consulta las medidas de cada prenda para elegir tu talla.</small></div></section>`;
+  document.addEventListener('click',event=>{
+    const link=event.target.closest('[data-collection]');if(!link)return;
+    const select=document.querySelector('#live-gender');if(select){select.value=link.dataset.collection;select.dispatchEvent(new Event('change',{bubbles:true}));}
+    const silhouette=document.querySelector('#mannequin');
+    if(silhouette&&link.dataset.collection!=='Todo'){silhouette.value=link.dataset.collection==='Caballeros'?'male':'female';silhouette.dispatchEvent(new Event('change',{bubbles:true}));}
+  });
+  const originalRender=renderLook;
+  renderLook=()=>{originalRender();const caption=document.querySelector('#stage-caption');if(caption)caption.textContent=lookProducts().length?'Ajuste automático · vista frontal':'Elige tus prendas y empieza a combinar';schedule();};
+  const note=document.querySelector('.fitting-room>.disclaimer');if(note)note.textContent='Ajuste visual 2D. La talla real se elige con las medidas de la prenda.';
+  const status=document.querySelector('.live-dot');if(status)status.textContent='Autoajuste';
+  schedule();
 })();
