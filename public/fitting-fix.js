@@ -2,14 +2,11 @@
   'use strict';
 
   /*
-   * Calibración visual del probador publicado en Vercel.
-   *
-   * La hoja de prendas original fue dibujada como catálogo, no sobre el
-   * cuerpo. Por eso una caja genérica por categoría deja hombros, cintura y
-   * cadera desalineados. Esta capa usa coordenadas por prenda y por maniquí
-   * y mantiene el resto de la lógica del probador intacta.
+   * Ajuste fino SOLO para el probador interactivo.
+   * La portada, looks guardados y demás composiciones mantienen las
+   * proporciones editoriales originales para no deformar el diseño.
    */
-  const fits={
+  const precise={
     female:{
       'top-marfil':      {x:31,y:21,width:38,height:27,z:20},
       'top-oliva':       {x:31,y:21,width:38,height:27,z:20},
@@ -30,7 +27,19 @@
     }
   };
 
-  const fallback={
+  /* Posiciones editoriales originales del proyecto. */
+  const editorial={
+    TOP:{x:18,y:20,width:64,height:28,z:20},
+    BOTTOM:{x:10,y:43,width:80,height:53,z:10},
+    OUTERWEAR:{x:4,y:17,width:92,height:39,z:30},
+    BAG:{x:61,y:44,width:36,height:24,z:50},
+    DRESS:{x:8,y:20,width:84,height:67,z:20},
+    SHOES:{x:17,y:88,width:66,height:12,z:20},
+    ACCESSORY_HEAD:{x:26,y:0,width:48,height:15,z:50},
+    ACCESSORY:{x:28,y:22,width:44,height:17,z:50}
+  };
+
+  const fittingFallback={
     TOP:{x:31,y:21,width:38,height:27,z:20},
     OUTERWEAR:{x:22,y:17,width:56,height:39,z:30},
     BOTTOM:{x:28,y:40,width:44,height:55,z:10},
@@ -43,29 +52,28 @@
 
   const css=document.createElement('style');
   css.textContent=`
-    .stage .real-body{overflow:visible}
-    .stage .fitted-layer{background-repeat:no-repeat;transition:opacity .18s ease,filter .18s ease;transform-origin:center center}
+    .stage .real-body{overflow:hidden}
+    .stage .fitted-layer{background-repeat:no-repeat;transform-origin:center center;transition:opacity .18s ease,filter .18s ease}
     .stage .fitted-layer:hover,.stage .fitted-layer:focus-visible{filter:drop-shadow(0 2px 2px rgba(35,37,32,.16))!important;outline:1px dashed rgba(72,78,64,.55);outline-offset:2px}
     .stage-caption{pointer-events:none}
+    .home-visual .real-body{overflow:hidden}
     @media (max-width:720px){
-      .stage{height:230px!important}
-      .stage .real-body{height:230px!important;width:153px!important}
+      .stage{height:205px!important}
+      .stage .real-body{height:205px!important;width:136.66px!important}
     }
     @media (max-width:390px){
-      .stage{height:215px!important}
-      .stage .real-body{height:215px!important;width:143px!important}
+      .stage{height:185px!important}
+      .stage .real-body{height:185px!important;width:123.33px!important}
     }
   `;
   document.head.append(css);
 
-  /* `fittedLayer` viene de live.js. Se reemplaza antes de que termine el
-     bootstrap asíncrono, por lo que el primer render ya usa esta versión. */
   fittedLayer=(p,interactive=false)=>{
-    const byProduct=fits[liveMannequin]?.[p.id];
-    const fromApi=boot?.assets?.find(a=>a.product_id===p.id&&a.mannequin_id===liveMannequin);
-    const pos=byProduct||fromApi||fallback[p.category]||fallback.ACCESSORY;
+    const pos=interactive
+      ? (precise[liveMannequin]?.[p.id]||fittingFallback[p.category]||fittingFallback.ACCESSORY)
+      : (editorial[p.category]||editorial.ACCESSORY);
     const rotation=Number(pos.rotation||0);
-    const image=fromApi?.image||p.image;
+    const image=p.image;
     const visual=image
       ? `background-image:url('${cleanPath(image)}');background-size:contain;background-position:center;`
       : `${spriteStyle(p)};`;
