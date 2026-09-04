@@ -9,6 +9,18 @@
     'falda-cacao': ['BOTTOM', 4, '#574338'], 'falda-perla': ['BOTTOM', 4, '#b8b0a2'],
     'bolso-noche': ['BAG', 5, '#242323']
   };
+  const aliases = {
+    'blusa-celeste': 'top-marfil', 'top-rosa-arcilla': 'top-marfil',
+    'blazer-vino-dama': 'blazer-pizarra', 'blazer-azul-dama': 'blazer-pizarra',
+    'pantalon-avena-dama': 'pantalon-grafito', 'falda-oliva': 'falda-cacao', 'falda-negra': 'falda-cacao',
+    'blazer-navy-caballero': 'blazer-pizarra', 'blazer-bosque-caballero': 'blazer-pizarra',
+    'blazer-camel-caballero': 'blazer-arena', 'blazer-vino-caballero': 'blazer-pizarra',
+    'chaqueta-piedra-caballero': 'blazer-arena', 'chaqueta-negra-caballero': 'blazer-pizarra',
+    'pantalon-navy-caballero': 'pantalon-grafito', 'pantalon-taupe-caballero': 'pantalon-grafito',
+    'pantalon-negro-caballero': 'pantalon-grafito', 'pantalon-oliva-caballero': 'pantalon-grafito',
+    'pantalon-arena-caballero': 'pantalon-humo'
+  };
+  const baseId = product => product ? aliases[product.id] || product.id : '';
   const makeCanvas = (w, h) => Object.assign(document.createElement('canvas'), { width: Math.round(w), height: Math.round(h) });
   const style = document.createElement('link');
   style.rel = 'stylesheet'; style.href = 'studio-fitting.css?v=1'; document.head.append(style);
@@ -19,35 +31,86 @@
     }));
     return sheetCache.get(url);
   }
+  function sheetCell(image, col, row) {
+    const cellW = image.naturalWidth / 3, cellH = image.naturalHeight / 3;
+    const result = makeCanvas(cellW, cellH);
+    result.getContext('2d').drawImage(image, col * cellW, row * cellH, cellW, cellH, 0, 0, result.width, result.height);
+    return result;
+  }
+  function recolorFromDifference(output, original, reference, swatch) {
+    if (!/^#[0-9a-f]{6}$/i.test(swatch || '')) return;
+    const parse = index => parseInt(swatch.slice(index, index + 2), 16);
+    const tint = [parse(1), parse(3), parse(5)];
+    const outputContext = output.getContext('2d', { willReadFrequently: true });
+    const originalData = original.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, original.width, original.height);
+    const referenceData = reference.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, reference.width, reference.height);
+    const result = outputContext.getImageData(0, 0, output.width, output.height);
+    for (let i = 0; i < result.data.length; i += 4) {
+      const difference = Math.max(
+        Math.abs(originalData.data[i] - referenceData.data[i]),
+        Math.abs(originalData.data[i + 1] - referenceData.data[i + 1]),
+        Math.abs(originalData.data[i + 2] - referenceData.data[i + 2])
+      );
+      if (difference < 18 || originalData.data[i + 3] < 24) continue;
+      const mask = Math.min(.96, Math.max(0, (difference - 14) / 68));
+      const luminance = .2126 * originalData.data[i] + .7152 * originalData.data[i + 1] + .0722 * originalData.data[i + 2];
+      const shade = Math.min(1.55, Math.max(.28, luminance / 168));
+      for (let channel = 0; channel < 3; channel++) {
+        const colored = Math.min(255, tint[channel] * shade);
+        result.data[i + channel] = result.data[i + channel] * (1 - mask) + colored * mask;
+      }
+    }
+    outputContext.putImageData(result, 0, 0);
+  }
   function selection(items, sex) {
     const list = lookProducts(items), m = boot.mannequins.find(m => m.id === sex);
     const standardBody = m?.image === `/assets/mannequin-${sex}.png`;
     const supported = ['female', 'male'].includes(sex) && standardBody && list.every(p => {
-      const a = approved[p.id];
-      return a && !p.image && p.category === a[0] && Number(p.cell) === a[1] && p.swatch?.toLowerCase() === a[2]
+      const id = baseId(p), a = approved[id];
+      return a && !p.image && p.category === a[0] && Number(p.cell) === a[1] && /^#[0-9a-f]{6}$/i.test(p.swatch || '')
         && !boot.assets.some(a => a.product_id === p.id && a.mannequin_id === sex)
-        && (sex === 'female' || !['TOP'].includes(p.category) && !/falda/.test(p.id));
+        && (sex === 'female' || !['TOP'].includes(p.category) && !/falda/.test(id));
     });
     const byCategory = Object.fromEntries(list.map(p => [p.category, p]));
     const top = byCategory.TOP, jacket = byCategory.OUTERWEAR, bottom = byCategory.BOTTOM;
-    const olive = top?.id === 'top-oliva', slate = jacket?.id === 'blazer-pizarra';
+    const olive = baseId(top) === 'top-oliva', slate = baseId(jacket) === 'blazer-pizarra';
     const upper = jacket ? (slate ? (top ? (olive ? 8 : 6) : 4) : (top ? (olive ? 7 : 5) : 3)) : top ? (olive ? 2 : 1) : 0;
-    const maleIndex = (bottom ? (bottom.id === 'pantalon-humo' ? 2 : 1) : 0) * 3 + (jacket ? (slate ? 2 : 1) : 0);
+    const maleIndex = (bottom ? (baseId(bottom) === 'pantalon-humo' ? 2 : 1) : 0) * 3 + (jacket ? (slate ? 2 : 1) : 0);
     const cell = sex === 'male' ? maleIndex : upper;
     return { list, supported, sex, top, jacket, bottom, bag: byCategory.BAG,
       col: cell % 3, row: Math.floor(cell / 3) };
   }
-  function renderKey(s) { return [s.sex, s.top?.id, s.jacket?.id, s.bottom?.id].join('|'); }
+  function renderKey(s) { return [s.sex, s.top, s.jacket, s.bottom].map(p => typeof p === 'string' ? p : `${p?.id || ''}:${p?.swatch || ''}`).join('|'); }
   async function scene(s) {
     const key = renderKey(s); if (sceneCache.has(key)) return sceneCache.get(key);
     const promise = (async () => {
       const bottoms = { 'pantalon-grafito': 'graphite', 'pantalon-humo': 'smoke', 'falda-cacao': 'cacao', 'falda-perla': 'pearl' };
-      const file = s.sex === 'male' ? 'studio-male-all.png' : 'studio-female-' + (bottoms[s.bottom?.id] || 'bare') + '.png';
+      const file = s.sex === 'male' ? 'studio-male-all.png' : 'studio-female-' + (bottoms[baseId(s.bottom)] || 'bare') + '.png';
       const image = await readSheet('/assets/' + file);
-      const cellW = image.naturalWidth / 3, cellH = image.naturalHeight / 3;
-      const source = makeCanvas(cellW, cellH);
-      source.getContext('2d').drawImage(image, s.col * cellW, s.row * cellH, cellW, cellH, 0, 0, source.width, source.height);
-      return source;
+      const original = sheetCell(image, s.col, s.row), output = makeCanvas(original.width, original.height);
+      output.getContext('2d').drawImage(original, 0, 0);
+      if (s.sex === 'male') {
+        if (s.bottom && s.bottom.swatch?.toLowerCase() !== approved[baseId(s.bottom)][2]) {
+          recolorFromDifference(output, original, sheetCell(image, s.col, 0), s.bottom.swatch);
+        }
+        if (s.jacket && s.jacket.swatch?.toLowerCase() !== approved[baseId(s.jacket)][2]) {
+          recolorFromDifference(output, original, sheetCell(image, 0, s.row), s.jacket.swatch);
+        }
+      } else {
+        if (s.bottom && s.bottom.swatch?.toLowerCase() !== approved[baseId(s.bottom)][2]) {
+          const bare = await readSheet('/assets/studio-female-bare.png');
+          recolorFromDifference(output, original, sheetCell(bare, s.col, s.row), s.bottom.swatch);
+        }
+        if (s.jacket && s.jacket.swatch?.toLowerCase() !== approved[baseId(s.jacket)][2]) {
+          const topOnly = s.top ? (baseId(s.top) === 'top-oliva' ? 2 : 1) : 0;
+          recolorFromDifference(output, original, sheetCell(image, topOnly % 3, Math.floor(topOnly / 3)), s.jacket.swatch);
+        }
+        if (s.top && s.top.swatch?.toLowerCase() !== approved[baseId(s.top)][2]) {
+          const jacketOnly = s.jacket ? (baseId(s.jacket) === 'blazer-pizarra' ? 4 : 3) : 0;
+          recolorFromDifference(output, original, sheetCell(image, jacketOnly % 3, Math.floor(jacketOnly / 3)), s.top.swatch);
+        }
+      }
+      return output;
     })();
     sceneCache.set(key, promise);
     promise.catch(() => sceneCache.delete(key));

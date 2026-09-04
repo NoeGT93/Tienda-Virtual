@@ -2,3 +2,17 @@ body:not(.connected)>*:not(#toast){visibility:hidden}body:not(.connected):before
 .real-body{isolation:auto} .field input[type=number]{min-height:44px}
 
 .fitted-layer{mix-blend-mode:normal}.fitted-layer.legacy-cutout{filter:url(#garment-cutout)!important}
+
+/* Consistent breathing room across storefront, account and administration screens. */
+body{--page-gutter:clamp(24px,5vw,88px)}
+.announcement{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+header{width:100%;max-width:1540px;margin-left:auto!important;margin-right:auto!important;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+main,main#screens{width:100%;max-width:1540px!important;margin-left:auto!important;margin-right:auto!important;padding-left:var(--page-gutter)!important;padding-right:var(--page-gutter)!important}
+footer{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+.workspace{gap:clamp(34px,3.2vw,52px)}
+.product-grid{gap:34px 20px}
+.home-section{padding-top:52px;padding-bottom:52px}
+.page-shell{padding-top:46px;padding-bottom:74px}
+.panel{padding:clamp(24px,2.2vw,34px)}
+@media(max-width:1100px){body{--page-gutter:clamp(22px,4vw,42px)}.workspace{gap:28px}}
+@media(max-width:720px){body{--page-gutter:18px}.workspace{gap:24px}.product-grid{gap:28px 14px}.home-section{padding-top:36px;padding-bottom:36px}.page-shell{padding-top:30px;padding-bottom:54px}.panel{padding:20px}}
