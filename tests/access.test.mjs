@@ -81,6 +81,10 @@ test('owner activation, permissions, invitations, recovery, session revocation a
     r = await admin('/admin/uploads', 'POST', { type: 'image/png', data: png });
     assert.equal(r.status, 201); const media = r.data.url;
     assert.equal((await customer('/admin/uploads', 'POST', { type: 'image/png', data: png })).status, 403);
+    r = await admin('/admin/products', 'POST', { name: 'Pantalón de vestir Gabardina', description: 'Prueba de clasificación', category: 'DRESS', gender: 'Caballeros', color: 'Beige', price: 15000, image: media, sizes: ['M'], swatch: '#c9bd9e', active: true });
+    assert.equal(r.status, 200);
+    const classified = (await admin('/admin/overview')).data.products.find(product => product.id === r.data.id);
+    assert.equal(classified.category, 'BOTTOM');
     await stop();
     const fixture = spawnSync(process.execPath, ['--input-type=module', '-e', "import {run,close} from './server/db.mjs'; await run('UPDATE access_tokens SET used=0,expires=1'); await close();"], { env, encoding: 'utf8' });
     assert.equal(fixture.status, 0, fixture.stderr);
