@@ -1,3 +1,5 @@
-# Servidor
+# API de Lulos
 
-Ejecuta `node server/server.mjs` desde la raíz con Node.js 24 o posterior. Consulta el README principal para configuración y límites de despliegue.
+Servidor Node.js con PostgreSQL para Vercel y SQLite para desarrollo local. `server.mjs` exporta el manejador utilizado por `api/index.mjs`; `database.mjs` inicializa el esquema y la persistencia; `access.mjs` gestiona permisos, invitaciones y recuperación.
+
+Configuración, primer administrador y comandos: consulta `../README.md`. Las credenciales se configuran fuera del repositorio. No hay usuarios o contraseñas predefinidos.
