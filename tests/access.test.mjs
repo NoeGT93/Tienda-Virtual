@@ -36,6 +36,9 @@ test('owner activation, permissions, invitations, recovery, session revocation a
     assert.match(r.headers.get('set-cookie'), /HttpOnly; SameSite=Lax;.*Secure/);
     assert.equal(r.data.products.find(p => p.id === 'blazer-arena').swatch, '#b7936a');
     assert.equal(r.data.products.find(p => p.id === 'top-oliva').filter, 'sepia(.45) saturate(.65) brightness(.7) contrast(3)');
+    const menswear = r.data.products.filter(p => p.gender === 'Caballeros');
+    assert.deepEqual(Object.fromEntries(['TOP', 'BOTTOM', 'OUTERWEAR'].map(category => [category, menswear.filter(p => p.category === category).length])), { TOP: 6, BOTTOM: 6, OUTERWEAR: 6 });
+    assert.equal(new Set(menswear.map(p => p.image)).size, 18);
     assert.equal((await admin('/setup', 'POST', { email: 'owner@example.test', name: 'Owner', password, setupToken: 'wrong' })).status, 403);
     assert.equal((await admin('/setup', 'POST', { email: 'owner@example.test', name: 'Owner', password, setupToken })).status, 201);
     r = await admin('/bootstrap'); const owner = r.data.user;

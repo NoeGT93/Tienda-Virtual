@@ -160,11 +160,30 @@ await transaction(async () => {
   );
   for (const p of seed) {
     if (await one('SELECT id FROM products WHERE id=?', p.id)) {
+      if (p.image) {
+        await run(
+          "UPDATE products SET name=?,description=?,category=?,gender=?,color=?,price=?,old_price=?,image=?,cell=?,swatch=?,filter=?,badge=? WHERE id=?",
+          p.name,
+          p.description,
+          p.category,
+          p.gender,
+          p.color,
+          Math.round(p.price * 100),
+          p.oldPrice ? Math.round(p.oldPrice * 100) : null,
+          p.image,
+          p.cell,
+          p.swatch,
+          p.filter || 'none',
+          p.badge || '',
+          p.id,
+        );
+        continue;
+      }
       await run("UPDATE products SET swatch=?,filter=?,badge=? WHERE id=? AND swatch=''", p.swatch, p.filter || 'none', p.badge || '', p.id);
       continue;
     }
     await run(
-      "INSERT INTO products(id,name,description,category,gender,color,price,old_price,cell,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO products(id,name,description,category,gender,color,price,old_price,image,cell,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
       p.id,
       p.name,
       p.description,
@@ -173,6 +192,7 @@ await transaction(async () => {
       p.color,
       Math.round(p.price * 100),
       p.oldPrice ? Math.round(p.oldPrice * 100) : null,
+      p.image || null,
       p.cell,
       new Date().toISOString(),
     );

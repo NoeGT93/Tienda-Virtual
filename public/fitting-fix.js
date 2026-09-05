@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const stylesheet = document.createElement('link');
-  stylesheet.rel = 'stylesheet'; stylesheet.href = 'visual-refresh.css?v=3';
+  stylesheet.rel = 'stylesheet'; stylesheet.href = 'visual-refresh.css?v=4';
   document.head.append(stylesheet);
   const images = new Map(), garments = new Map();
   const profiles = {
@@ -49,7 +49,9 @@
     for(let y=0;y<source.height;y++){
       const t=y/Math.max(1,source.height-1);let scale=1;
       if(category==='TOP')scale=1-(male ? .11 : .19)*Math.sin(Math.PI*Math.min(1,t));
-      if(category==='OUTERWEAR')scale=1-(male ? .07 : .12)*Math.sin(Math.PI*Math.min(1,t));
+      // The catalog blazer is cut on a narrow female form. Open its waist and hem
+      // when it is shown on the broader male mannequin instead of cinching it again.
+      if(category==='OUTERWEAR')scale=male?1+.12*Math.sin(Math.PI*Math.min(1,t)):1-.12*Math.sin(Math.PI*Math.min(1,t));
       if(category==='BOTTOM')scale=.84+.16*Math.min(1,t/.24);
       if(category==='DRESS')scale=t<.42?1-(male ? .10 : .22)*Math.sin(Math.PI*t/.84):.82+.14*Math.min(1,(t-.42)/.58);
       const width=source.width*scale,x=(source.width-width)/2;
@@ -108,7 +110,9 @@
     const p=productById(node.dataset.fitProduct),mannequin=node.dataset.fitMannequin;if(!p)return;
     try {
       const prepared=await prepare(p,mannequin);if(!node.isConnected)return;
-      const saved=assetFor(p,mannequin),source=p.image&&!saved?conformToBody(prepared,p.category,mannequin):prepared,pos=saved?{x:saved.x/100,y:saved.y/100,width:saved.width/100,height:saved.height/100,z:saved.z}:fit(p,source,mannequin);
+      const saved=assetFor(p,mannequin),shouldConform=!saved&&(!!p.image||(mannequin==='male'&&p.category==='OUTERWEAR')),
+        source=shouldConform?conformToBody(prepared,p.category,mannequin):prepared,
+        pos=saved?{x:saved.x/100,y:saved.y/100,width:saved.width/100,height:saved.height/100,z:saved.z}:fit(p,source,mannequin);
       Object.assign(node.style,{left:`${pos.x*100}%`,top:`${pos.y*100}%`,width:`${pos.width*100}%`,height:`${pos.height*100}%`,zIndex:pos.z,transform:`rotate(${Number(saved?.rotation)||0}deg)`});
       const c=node.querySelector('canvas');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);node.classList.add('fit-ready');
     }catch{node.remove();toast('No se pudo cargar una imagen de la prenda. Intenta de nuevo.');}
