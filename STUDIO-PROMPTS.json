@@ -14,5 +14,9 @@
   {
     "key": "mix-female-scenes",
     "prompt": "Matriz exacta de 5 columnas por 3 filas con las 15 combinaciones entre cinco partes superiores y tres prendas inferiores femeninas. Un único maniquí femenino marfil idéntico en todas las celdas, misma pose, cámara, escala y luz. La ropa se viste de forma natural, sin duplicaciones, siluetas fantasma, texto ni logotipos."
+  },
+  {
+    "key": "campaign-quetzaltenango",
+    "prompt": "Fotografía editorial vertical 4:5 para LULÓS con la misma pareja y los mismos atuendos de la campaña: ella con blazer camel, top marfil y pantalón amplio grafito; él con blazer grafito, camisa marfil y pantalón oscuro. Ambos aparecen de cuerpo entero sobre el paseo del Parque Central de Quetzaltenango, Guatemala, con el kiosco circular histórico, jardines, luminarias, árboles y montañas reconocibles al fondo. Luz natural cálida de mañana, sombras de contacto realistas, perspectiva coherente, telas detalladas y retoque comercial premium. Sin texto, logotipos, marcas de agua, personas extra, extremidades duplicadas ni rostros distorsionados."
   }
 ]

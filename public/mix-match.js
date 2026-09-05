@@ -38,9 +38,40 @@
     renderProducts();
   }
 
-  function buildLook(product, announce = true) {
+  function animateChoice(product, origin) {
+    if (!origin || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const source = origin.closest('.product-image, .mix-option') || origin;
+    const stage = document.querySelector('#stage');
+    const start = source.getBoundingClientRect();
+    if (!stage || !start.width || !start.height) return;
+    const end = stage.getBoundingClientRect(), meta = parse(product);
+    const targetX = end.left + end.width / 2;
+    const targetY = end.top + end.height * (meta?.slot === 'bottom' ? .67 : .37);
+    const dx = targetX - (start.left + start.width / 2);
+    const dy = targetY - (start.top + start.height / 2);
+    const scale = Math.max(.22, Math.min(.58, end.width * .24 / start.width));
+    const flyer = document.createElement('div');
+    flyer.className = 'sprite mix-flyer';
+    flyer.setAttribute('aria-hidden', 'true');
+    flyer.style.cssText = `${spriteStyle(product)};left:${start.left}px;top:${start.top}px;width:${start.width}px;height:${start.height}px`;
+    document.body.append(flyer);
+    stage.classList.remove('mix-stage-active');
+    void stage.offsetWidth;
+    stage.classList.add('mix-stage-active');
+    const turn = meta?.slot === 'bottom' ? 4 : -6;
+    const motion = flyer.animate([
+      { transform: 'translate3d(0,0,0) scale(1) rotate(0)', opacity: .96, filter: 'blur(0)' },
+      { transform: `translate3d(${dx * .48}px,${dy * .32 - 58}px,0) scale(${Math.max(scale, .56)}) rotate(${turn}deg)`, opacity: .92, offset: .52 },
+      { transform: `translate3d(${dx}px,${dy}px,0) scale(${scale}) rotate(0)`, opacity: .04, filter: 'blur(.8px)' }
+    ], { duration: 780, easing: 'cubic-bezier(.22,1,.36,1)' });
+    motion.finished.finally(() => flyer.remove());
+    setTimeout(() => stage.classList.remove('mix-stage-active'), 900);
+  }
+
+  function buildLook(product, announce = true, origin = null) {
     const meta = parse(product);
     if (!meta) return;
+    animateChoice(product, origin);
     liveMannequin = meta.sex;
     const upper = mixProducts(meta.sex, 'upper');
     const bottoms = mixProducts(meta.sex, 'bottom');
@@ -105,7 +136,7 @@
   const previousEquip = equip;
   equip = (id, origin) => {
     const product = productById(id);
-    if (parse(product)) return buildLook(product);
+    if (parse(product)) return buildLook(product, true, origin);
     previousEquip(id, origin);
   };
 
@@ -139,7 +170,7 @@
     const choice = event.target.closest('[data-mix-choice]');
     if (choice) {
       event.preventDefault();
-      buildLook(productById(choice.dataset.mixChoice));
+      buildLook(productById(choice.dataset.mixChoice), true, choice);
       return;
     }
     const gender = event.target.closest('[data-gender]');
