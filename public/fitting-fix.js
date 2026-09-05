@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const stylesheet = document.createElement('link');
-  stylesheet.rel = 'stylesheet'; stylesheet.href = 'visual-refresh.css?v=4';
+  stylesheet.rel = 'stylesheet'; stylesheet.href = 'visual-refresh.css?v=3';
   document.head.append(stylesheet);
   const images = new Map(), garments = new Map();
   const profiles = {
@@ -16,20 +16,17 @@
     return images.get(url);
   }
   const canvas=(width,height)=>Object.assign(document.createElement('canvas'),{width:Math.round(width),height:Math.round(height)});
-  // Remove a transparent or uniform background connected to the edge. Interior fabric remains opaque.
+  // Remove only the light background connected to the edge. Light fabric inside a garment stays opaque.
   function trimBackground(source,removeHoles=false) {
     const ctx=source.getContext('2d',{willReadFrequently:true}), image=ctx.getImageData(0,0,source.width,source.height);
     const {data}=image,w=source.width,h=source.height,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);
-    let head=0,tail=0,samples=0;const edge=[0,0,0,0],corner=Math.max(2,Math.round(Math.min(w,h)*.035));
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if((x<corner||x>=w-corner)&&(y<corner||y>=h-corner)){const i=(y*w+x)*4;for(let c=0;c<4;c++)edge[c]+=data[i+c];samples++}
-    for(let c=0;c<4;c++)edge[c]/=Math.max(1,samples);
-    const transparent=edge[3]<80,background=i=>{const p=i*4,alpha=data[p+3];if(alpha<12)return true;if(transparent)return false;const distance=Math.hypot(data[p]-edge[0],data[p+1]-edge[1],data[p+2]-edge[2]);return distance<52||(Math.min(data[p],data[p+1],data[p+2])>242&&Math.max(data[p],data[p+1],data[p+2])-Math.min(data[p],data[p+1],data[p+2])<10)};
+    let head=0,tail=0;
+    const background=i=>data[i*4+3]<12 || (Math.min(data[i*4],data[i*4+1],data[i*4+2])>238 && Math.max(data[i*4],data[i*4+1],data[i*4+2])-Math.min(data[i*4],data[i*4+1],data[i*4+2])<12);
     const visit=i=>{if(i>=0&&i<w*h&&!seen[i]&&background(i)){seen[i]=1;queue[tail++]=i;}};
     for(let x=0;x<w;x++){visit(x);visit((h-1)*w+x)}
     for(let y=0;y<h;y++){visit(y*w);visit(y*w+w-1)}
     while(head<tail){const i=queue[head++];data[i*4+3]=0;if(i%w)visit(i-1);if(i%w<w-1)visit(i+1);visit(i-w);visit(i+w)}
     if(removeHoles)for(let i=0;i<w*h;i++)if(background(i))data[i*4+3]=0;
-    if(!transparent)for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x,p=i*4;if(seen[i]||data[p+3]<12)continue;const edgePixel=seen[i-1]||seen[i+1]||seen[i-w]||seen[i+w];if(!edgePixel)continue;const distance=Math.hypot(data[p]-edge[0],data[p+1]-edge[1],data[p+2]-edge[2]);if(distance<105)data[p+3]=Math.round(data[p+3]*Math.max(0,Math.min(1,(distance-42)/63)))}
     let left=w,top=h,right=0,bottom=0;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>30){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
     if(right<=left||bottom<=top)throw Error('No se pudo identificar la prenda');
@@ -42,22 +39,6 @@
     const data=ctx.getImageData(0,y,source.width,1).data;
     let left=source.width,right=0;for(let x=0;x<source.width;x++)if(data[x*4+3]>100){left=Math.min(left,x);right=Math.max(right,x)}
     return Math.max(.25,(right-left+1)/source.width);
-  }
-  function conformToBody(source,category,mannequin) {
-    if(!['TOP','BOTTOM','OUTERWEAR','DRESS'].includes(category))return source;
-    const result=canvas(source.width,source.height),ctx=result.getContext('2d'),male=mannequin==='male';
-    for(let y=0;y<source.height;y++){
-      const t=y/Math.max(1,source.height-1);let scale=1;
-      if(category==='TOP')scale=1-(male ? .11 : .19)*Math.sin(Math.PI*Math.min(1,t));
-      // The catalog blazer is cut on a narrow female form. Open its waist and hem
-      // when it is shown on the broader male mannequin instead of cinching it again.
-      if(category==='OUTERWEAR')scale=male?1+.12*Math.sin(Math.PI*Math.min(1,t)):1-.12*Math.sin(Math.PI*Math.min(1,t));
-      if(category==='BOTTOM')scale=.84+.16*Math.min(1,t/.24);
-      if(category==='DRESS')scale=t<.42?1-(male ? .10 : .22)*Math.sin(Math.PI*t/.84):.82+.14*Math.min(1,(t-.42)/.58);
-      const width=source.width*scale,x=(source.width-width)/2;
-      ctx.drawImage(source,0,y,source.width,1,x,y,width,1);
-    }
-    return result;
   }
   function assetFor(p,mannequin) {return boot?.assets?.find(a=>a.product_id===p.id&&a.mannequin_id===mannequin);}
   function garmentKey(p,mannequin) {const a=assetFor(p,mannequin);return [p.id,a?.image||p.image||p.cell,p.filter||'none'].join('|');}
@@ -102,17 +83,15 @@
   };
   realBody=(items=state.equipped,interactive=false)=>{
     const m=boot.mannequins.find(m=>m.id===liveMannequin);
-    return `<div class="real-body precision-body" data-fit-engine="automatic" data-silhouette="${esc(liveMannequin)}"><img class="silhouette-image" src="${cleanPath(m?.image)}" alt="${esc(m?.name||'Maniquí')}" width="1024" height="1536">${lookProducts(items).map(p=>fittedLayer(p,interactive)).join('')}</div>`;
+    return `<div class="real-body precision-body" data-silhouette="${esc(liveMannequin)}"><img class="silhouette-image" src="${cleanPath(m?.image)}" alt="${esc(m?.name||'Maniquí')}" width="1024" height="1536">${lookProducts(items).map(p=>fittedLayer(p,interactive)).join('')}</div>`;
   };
   const pending=new WeakSet();
   async function paint(node) {
     if(pending.has(node))return;pending.add(node);
     const p=productById(node.dataset.fitProduct),mannequin=node.dataset.fitMannequin;if(!p)return;
     try {
-      const prepared=await prepare(p,mannequin);if(!node.isConnected)return;
-      const saved=assetFor(p,mannequin),shouldConform=!saved&&(!!p.image||(mannequin==='male'&&p.category==='OUTERWEAR')),
-        source=shouldConform?conformToBody(prepared,p.category,mannequin):prepared,
-        pos=saved?{x:saved.x/100,y:saved.y/100,width:saved.width/100,height:saved.height/100,z:saved.z}:fit(p,source,mannequin);
+      const source=await prepare(p,mannequin);if(!node.isConnected)return;
+      const saved=assetFor(p,mannequin),pos=saved?{x:saved.x/100,y:saved.y/100,width:saved.width/100,height:saved.height/100,z:saved.z}:fit(p,source,mannequin);
       Object.assign(node.style,{left:`${pos.x*100}%`,top:`${pos.y*100}%`,width:`${pos.width*100}%`,height:`${pos.height*100}%`,zIndex:pos.z,transform:`rotate(${Number(saved?.rotation)||0}deg)`});
       const c=node.querySelector('canvas');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);node.classList.add('fit-ready');
     }catch{node.remove();toast('No se pudo cargar una imagen de la prenda. Intenta de nuevo.');}
