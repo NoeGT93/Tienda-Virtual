@@ -53,7 +53,7 @@
     commitLook(next);
     syncCatalog(meta.sex);
     if (announce) toast(`${product.name} · combinación actualizada`);
-    if (typeof request === 'function') request('/events', 'POST', { type: 'garment_tried', productId: product.id }).catch(() => {});
+    if (typeof request === 'function' && csrf) request('/events', 'POST', { type: 'garment_tried', productId: product.id }).catch(() => {});
   }
 
   function chooseDefault(sex, announce = false) {
