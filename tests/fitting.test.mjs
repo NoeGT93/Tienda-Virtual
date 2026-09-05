@@ -24,10 +24,11 @@ test('fitting guard protects shirt/jacket layering and both mannequins', async (
   assert.match(source, /BOTTOM:\s*10/);
 });
 
-test('fitting guard clamps automatic layers to the mannequin canvas', async () => {
+test('fitting guard constrains every rendered layer including persisted DB adjustments', async () => {
   const source = await load('public/fitting-layer-guard.js');
   assert.match(source, /clampToCanvas/);
-  assert.match(source, /1 - width/);
-  assert.match(source, /1 - height/);
-  assert.match(source, /savedAsset/);
+  assert.match(source, /stabilizeGeometry/);
+  assert.match(source, /BODY_CATEGORIES/);
+  assert.match(source, /Persisted adjustments from older versions/);
+  assert.doesNotMatch(source, /if\s*\(!manual\)/, 'persisted assets must not bypass the safety envelope');
 });
