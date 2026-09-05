@@ -24,9 +24,9 @@
   style.textContent = `
     #stage .precision-body{position:relative;isolation:isolate;overflow:visible!important}
     #stage .precision-body>.silhouette-image{position:relative;z-index:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
-    #stage .fit-layer{transform-origin:50% 50%;background:transparent!important;touch-action:manipulation}
-    #stage .fit-layer canvas{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
-    #stage .fit-layer[data-under-outerwear="true"]{clip-path:inset(0 8% 0 8% round 2%)}
+    .precision-body .fit-layer{transform-origin:50% 50%;background:transparent!important;touch-action:manipulation}
+    .precision-body .fit-layer canvas{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
+    .precision-body .fit-layer[data-under-outerwear="true"]{clip-path:inset(0 8% 0 8% round 2%)}
     #stage .fit-layer[type="button"]{border:0!important;outline:0;background:transparent!important}
     #stage .fit-layer[type="button"]:focus-visible{outline:1px solid #747a63!important;outline-offset:3px}
     #stage .fit-layer[type="button"]:hover{filter:brightness(1.02) drop-shadow(0 1px 1px rgba(40,35,28,.08))}
@@ -76,7 +76,7 @@
     const underOuterwear = product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
     const key = underOuterwear ? 'TOP_WITH_OUTERWEAR' : product.category;
     const limit = LIMITS[mannequin]?.[key];
-    if (!limit || savedAsset(product, mannequin)) return;
+    if (!limit) return;
     const currentWidth = percent(node, 'width');
     if (Number.isFinite(currentWidth) && currentWidth > limit.maxWidth) centerWidth(node, limit.maxWidth);
     const currentTop = percent(node, 'top');
@@ -90,12 +90,16 @@
     const product = productFor(node);
     if (!product) return;
     const mannequin = mannequinFor(node);
-    const underOuterwear = product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
+    const manual = savedAsset(product, mannequin);
+    const underOuterwear = !manual && product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
     node.dataset.underOuterwear = String(underOuterwear);
     node.dataset.fitCategory = product.category;
-    if (LAYER_Z[product.category] != null && !savedAsset(product, mannequin)) node.style.zIndex = String(LAYER_Z[product.category]);
-    stabilizeAutomaticGeometry(node, product, mannequin);
-    clampToCanvas(node);
+
+    if (!manual) {
+      if (LAYER_Z[product.category] != null) node.style.zIndex = String(LAYER_Z[product.category]);
+      stabilizeAutomaticGeometry(node, product, mannequin);
+      clampToCanvas(node);
+    }
   }
 
   function updateStageState() {
