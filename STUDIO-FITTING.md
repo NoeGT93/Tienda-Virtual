@@ -1,36 +1,33 @@
-# Probador con vistas de estudio
+# Probador dinámico de combinaciones
 
-Esta revisión sustituye la superposición de recortes por fotografías ilustrativas generadas de maniquíes ya vestidos. La selección elige automáticamente una escena completa: no estira imágenes de prendas ni pinta colores por encima del cuerpo.
+El probador usa prendas individuales y escenas completas preparadas. Al elegir una parte superior o inferior, conserva la otra pieza y muestra inmediatamente la combinación resultante sobre el mismo maniquí, con la misma pose y encuadre.
 
 ## Cobertura
 
-- Dama: nueve estados de torso (vacío, dos tops, dos blazers solos y cuatro combinaciones top/blazer), con cinco estados inferiores (vacío, dos pantalones y dos faldas).
-- Caballero: tres estados de torso y tres inferiores.
-- Total: 54 combinaciones preparadas. El bolso se muestra en una ficha separada para no fingir que la mano lo sostiene.
-- Vaciar, retirar prendas, deshacer, rehacer, cambiar silueta y ampliar la escena siguen funcionando.
-- Las escenas se cargan bajo demanda y se reutilizan durante la sesión.
+- Dama: cinco partes superiores y tres inferiores, para 15 combinaciones.
+- Caballero: cinco partes superiores y tres pantalones, para 15 combinaciones.
+- El catálogo cambia junto con la colección seleccionada.
+- El maniquí no cambia entre outfits: solo cambia la ropa elegida.
+- Vaciar, retirar prendas, deshacer, rehacer, guardar el look y agregar las prendas a la bolsa siguen disponibles.
 
-## Outfits completos
+## Interacción
 
-- Dama: 10 outfits completos, desde sastrería camel hasta combinaciones oliva, cacao, marfil y grafito.
-- Caballero: 10 outfits completos con camisas, polos, tejidos, sobrecamisas y sastrería.
-- El selector cambia automáticamente entre las dos colecciones cuando cambia el maniquí.
-- Cada outfit tiene una escena completa, una ficha propia, precio, tallas configurables y una imagen individual para el catálogo.
-- Los recursos fuente son `public/assets/outfits-women-10.png` y `public/assets/outfits-men-10.png`; los 20 recortes `outfit-{female,male}-01..10.jpg` alimentan las fichas.
+El panel «Crea tu look» permite cambiar cada pieza directamente. También se puede usar la percha de cualquier ficha del catálogo. Al seleccionar una prenda de otra colección, el probador cambia al maniquí fijo correspondiente y carga una pieza complementaria para presentar un look completo.
 
-## Alcance real
+Las prendas permanecen como productos separados con su propio precio, talla y disponibilidad. Los conjuntos cerrados y el carrusel de looks predeterminados fueron retirados.
 
-Son vistas ilustrativas preparadas para el catálogo actual. No es generación de IA en cada clic, un modelo 3D, una simulación de tejido ni una predicción de talla. Las prendas nuevas, imágenes o maniquíes personalizados necesitan sus escenas preparadas. Una combinación sin escena muestra un aviso; nunca vuelve al montaje de recortes ni presenta otra prenda como si fuera la elegida.
+## Implementación visual
 
-La entrada carga `studio-fitting.js` después del resto del frontend y `curated-outfits.js` incorpora la biblioteca de outfits sin alterar el motor de escenas estable. El backend registra esos conjuntos como categoría `OUTFIT` mediante una carga idempotente, también cuando la base ya contiene productos.
+La interfaz no estira recortes sobre el cuerpo ni cambia el maniquí en cada selección. Cada combinación usa una celda de `mix-female-scenes.png` o `mix-male-scenes.png`, mientras que las fichas de producto usan `mix-female-garments.png` y `mix-male-garments.png`.
+
+Son vistas ilustrativas preparadas para estas 30 combinaciones. No predicen talla, caída exacta ni ajuste corporal. Una colección nueva necesita su hoja de prendas y su matriz de combinaciones revisadas antes de publicarse.
 
 ## Recursos finales
 
-- `public/studio-fitting.js`, `public/studio-fitting.css`, `public/index.html`.
-- `public/assets/studio-female-{bare,graphite,smoke,cacao,pearl}.png`.
-- `public/assets/studio-male-all.png`.
-- `public/curated-outfits.js`, `public/curated-outfits.css` y `server/outfit-seed.json`.
-- `public/assets/outfits-{women,men}-10.png` y los 20 recortes de catálogo.
-- `STUDIO-PROMPTS.json`: instrucciones usadas con la herramienta integrada de generación de imágenes; no se usó CLI ni una clave API.
-
-Las cuadrículas son hojas internas de recursos. Cada celda se muestra íntegra, con su proporción original y sombras integradas. Para añadir otra prenda, preparar sus combinaciones a partir de fotos reales, incorporarlas al registro de escenas y revisar visualmente las vistas antes de habilitarlas.
+- `public/mix-match.js` y `public/mix-match.css`.
+- `server/mix-seed.json`.
+- `public/assets/mix-female-garments.png`.
+- `public/assets/mix-male-garments.png`.
+- `public/assets/mix-female-scenes.png`.
+- `public/assets/mix-male-scenes.png`.
+- `STUDIO-PROMPTS.json`, con las instrucciones de generación de los recursos visuales.

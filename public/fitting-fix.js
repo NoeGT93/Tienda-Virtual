@@ -98,7 +98,7 @@
   }
   let scheduled=false;
   async function paintThumbnail(node){
-    if(pending.has(node))return;pending.add(node);const p=productById(node.dataset.fitThumb);if(!p)return;
+    if(pending.has(node))return;const p=productById(node.dataset.fitThumb);if(!p||/^mix-/.test(p.id))return;pending.add(node);
     try{const source=await prepare(p,'thumbnail');if(!node.isConnected)return;const c=canvas(source.width,source.height);c.getContext('2d').drawImage(source,0,0);c.setAttribute('aria-hidden','true');node.replaceChildren(c);node.classList.add('clean-thumbnail');}catch{/* Keep the original product photograph if processing fails. */}
   }
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;document.querySelectorAll('[data-fit-product]').forEach(paint);document.querySelectorAll('[data-fit-thumb]').forEach(paintThumbnail)})}

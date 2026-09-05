@@ -27,7 +27,8 @@ CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id,created); CREATE INDEX 
 `);
 export const all=(sql,...args)=>db.prepare(sql).all(...args);export const one=(sql,...args)=>db.prepare(sql).get(...args);export const run=(sql,...args)=>db.prepare(sql).run(...args);
 export function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
-const seed=['seed.json','outfit-seed.json'].flatMap(file=>JSON.parse(readFileSync(new URL(`./${file}`,import.meta.url),'utf8')));
+const seed=['seed.json','mix-seed.json'].flatMap(file=>JSON.parse(readFileSync(new URL(`./${file}`,import.meta.url),'utf8')));
 transaction(()=>{for(const p of seed){if(one('SELECT id FROM products WHERE id=?',p.id))continue;run('INSERT INTO products(id,name,description,category,gender,color,price,old_price,cell,image,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)',p.id,p.name,p.description,p.category,p.gender,p.color,Math.round(p.price*100),p.oldPrice?Math.round(p.oldPrice*100):null,p.cell,p.image||null,new Date().toISOString());for(const size of p.sizes)run('INSERT INTO variants VALUES(?,?,?,?,?)',`${p.id}-${size}`,p.id,size,`${p.id}-${size}`,0)}
+ run("UPDATE products SET active=0 WHERE id LIKE 'outfit-%' OR id IN ('top-marfil','top-oliva','blazer-arena','blazer-pizarra','pantalon-grafito','pantalon-humo','falda-cacao','falda-perla','bolso-noche')");
  for(const [id,name,gender,image] of [['female','Dama · estándar','Damas','/assets/mannequin-female.png'],['male','Caballero · estándar','Caballeros','/assets/mannequin-male.png']])run('INSERT OR IGNORE INTO mannequins(id,name,gender,image) VALUES(?,?,?,?)',id,name,gender,image);
 });

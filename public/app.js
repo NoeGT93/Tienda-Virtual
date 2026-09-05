@@ -14,7 +14,11 @@ const $ = selector => document.querySelector(selector);
 const money = value => new Intl.NumberFormat('es-GT',{style:'currency',currency:'GTQ',minimumFractionDigits:2}).format(value);
 const productById = id => products.find(product=>product.id===id);
 const hanger = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6a2 2 0 1 1 3 1.7L12 9v2l9 6a1 1 0 0 1-.6 1.8H3.6A1 1 0 0 1 3 17l9-6"/></svg>';
-const spriteStyle = p => p.image && /^\/(assets|uploads)\/[a-zA-Z0-9_.-]+\.(png|webp|jpg|jpeg)$/i.test(p.image) ? `background-image:url('${p.image}');background-size:contain;background-position:center;filter:none` : `background-position:${p.cell%3*50}% ${p.cell>2?100:0}%;filter:none`;
+const spriteStyle = p => {
+ const mix=/^mix-(female|male)-(upper|bottom)-(\d{2})$/.exec(p.id||'');
+ if(mix){const cell=Number(p.cell)||0,x=(cell%4)*(100/3),y=cell>3?100:0;return `background-image:url('/assets/mix-${mix[1]}-garments.png');background-size:400% 200%;background-position:${x}% ${y}%;filter:none`}
+ return p.image && /^\/(assets|uploads)\/[a-zA-Z0-9_.-]+\.(png|webp|jpg|jpeg)$/i.test(p.image) ? `background-image:url('${p.image}');background-size:contain;background-position:center;filter:none` : `background-position:${p.cell%3*50}% ${p.cell>2?100:0}%;filter:none`;
+};
 const imageMarkup = (p,cls='') => `<div class="sprite ${cls}" data-fit-thumb="${safeText(p.id)}" style="${spriteStyle(p)}" role="img" aria-label="${safeText(p.name)}, ${safeText(p.color)}"></div>`;
 const initialLook = {TOP:'top-marfil',BOTTOM:'pantalon-grafito'};
 const state = {equipped:initialLook,history:[],future:[],favorites:[],saved:[],cart:[],category:'Todo',gender:'Todo',query:'',sort:'featured',favoritesOnly:false,mannequin:'standard'};
