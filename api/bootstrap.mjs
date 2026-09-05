@@ -1,4 +1,5 @@
 import seed from '../server/seed.json' with { type: 'json' };
+import outfitSeed from '../server/outfit-seed.json' with { type: 'json' };
 
 /**
  * Bootstrap compatible con Vercel.
@@ -13,7 +14,7 @@ export default function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  const products = seed.map((product) => ({
+  const products = [...seed, ...outfitSeed].map((product) => ({
     ...product,
     oldPrice: product.oldPrice ?? null,
     active: 1,
