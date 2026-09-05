@@ -18,6 +18,7 @@
   };
 
   const LAYER_Z = Object.freeze({ BOTTOM: 10, TOP: 20, DRESS: 20, SHOES: 20, OUTERWEAR: 30, BAG: 40, ACCESSORY: 40, ACCESSORY_HEAD: 40 });
+  const BODY_CATEGORIES = new Set(['TOP', 'OUTERWEAR', 'BOTTOM', 'DRESS']);
 
   const style = document.createElement('style');
   style.id = 'lulos-fitting-guard-style';
@@ -43,11 +44,6 @@
 
   function mannequinFor(node) { return node.dataset.fitMannequin === 'male' ? 'male' : 'female'; }
 
-  function savedAsset(product, mannequin) {
-    try { return Boolean(boot?.assets?.some(asset => asset.product_id === product.id && asset.mannequin_id === mannequin)); }
-    catch { return false; }
-  }
-
   function siblingHasCategory(node, category) {
     const parent = node.parentElement;
     if (!parent) return false;
@@ -70,36 +66,47 @@
     setPercent(node, 'left', x); setPercent(node, 'top', y); setPercent(node, 'width', width); setPercent(node, 'height', height);
   }
 
-  function centerWidth(node, width) { setPercent(node, 'width', width); setPercent(node, 'left', (1 - width) / 2); }
+  function centerWidth(node, width) {
+    setPercent(node, 'width', width);
+    setPercent(node, 'left', (1 - width) / 2);
+  }
 
-  function stabilizeAutomaticGeometry(node, product, mannequin) {
+  function stabilizeGeometry(node, product, mannequin) {
     const underOuterwear = product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
     const key = underOuterwear ? 'TOP_WITH_OUTERWEAR' : product.category;
     const limit = LIMITS[mannequin]?.[key];
     if (!limit) return;
+
     const currentWidth = percent(node, 'width');
     if (Number.isFinite(currentWidth) && currentWidth > limit.maxWidth) centerWidth(node, limit.maxWidth);
+
     const currentTop = percent(node, 'top');
     if (Number.isFinite(currentTop)) setPercent(node, 'top', clamp(currentTop, limit.minTop, limit.maxTop));
+
     const currentHeight = percent(node, 'height');
     if (Number.isFinite(currentHeight) && currentHeight > limit.maxHeight) setPercent(node, 'height', limit.maxHeight);
+
+    // Persisted adjustments from older versions can be much wider than the body.
+    // Keep body garments centered even when those old coordinates are still in the DB.
+    if (BODY_CATEGORIES.has(product.category)) {
+      const width = percent(node, 'width');
+      if (Number.isFinite(width)) centerWidth(node, width);
+    }
   }
 
   function stabilize(node) {
     if (!(node instanceof HTMLElement) || !node.matches('.fit-layer.fit-ready')) return;
     const product = productFor(node);
     if (!product) return;
+
     const mannequin = mannequinFor(node);
-    const manual = savedAsset(product, mannequin);
-    const underOuterwear = !manual && product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
+    const underOuterwear = product.category === 'TOP' && siblingHasCategory(node, 'OUTERWEAR');
     node.dataset.underOuterwear = String(underOuterwear);
     node.dataset.fitCategory = product.category;
 
-    if (!manual) {
-      if (LAYER_Z[product.category] != null) node.style.zIndex = String(LAYER_Z[product.category]);
-      stabilizeAutomaticGeometry(node, product, mannequin);
-      clampToCanvas(node);
-    }
+    if (LAYER_Z[product.category] != null) node.style.zIndex = String(LAYER_Z[product.category]);
+    stabilizeGeometry(node, product, mannequin);
+    clampToCanvas(node);
   }
 
   function updateStageState() {
@@ -110,7 +117,11 @@
     stage.dataset.hasOuterwear = String(readyLayers.some(node => productFor(node)?.category === 'OUTERWEAR'));
   }
 
-  function scan(root = document) { root.querySelectorAll?.('.fit-layer.fit-ready').forEach(stabilize); updateStageState(); }
+  function scan(root = document) {
+    root.querySelectorAll?.('.fit-layer.fit-ready').forEach(stabilize);
+    updateStageState();
+  }
+
   let queued = false;
   function schedule() {
     if (queued) return;
